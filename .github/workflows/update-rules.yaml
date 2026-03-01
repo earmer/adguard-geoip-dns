@@ -1,0 +1,32 @@
+name: Sync Rules
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Fetch Latest Tag
+        id: meta
+        run: |
+          TAG=$(curl -fILs -o /dev/null -w %{url_effective} https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest | grep -oE "[^/]+$")
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Download and Process
+        run: |
+          curl -fSL -o direct-list.txt https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/direct-list.txt
+          
+          # 这里可插入附加正则、内容
+          # echo "regexp:qcloudimg\.com$" >> direct-list.txt
+          sort -u direct-list.txt -o direct-list.txt
+
+      - name: Release if New
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: direct-list.txt
